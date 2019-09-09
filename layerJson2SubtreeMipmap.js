@@ -170,20 +170,20 @@ const updateFunction = type === 'oct' ?
     (packed ? updatePackedSubtreesMapOct : updateSubtreesMapOct) :
     (packed ? updatePackedSubtreesMapQuad : updateSubtreesMapQuad);
 
-for (let i = 0; i < subtreesToSpanTree; i++) {
-    const firstSubtreeLevel = i*subtreeLevels0Indexed;
+for (let subtreesDownTree = 0; subtreesDownTree < subtreesToSpanTree; subtreesDownTree++) {
+    const firstSubtreeLevel = subtreesDownTree*subtreeLevels0Indexed;
     const lastSubtreeLevel = firstSubtreeLevel + subtreeLevels0Indexed;
     console.log('computing subtrees on levels ' + firstSubtreeLevel + ' through ' + lastSubtreeLevel);
-    for (let j = 0; j < subtreeLevels; j++) {
-        const treeLevel = firstSubtreeLevel + j;
+    for (let subtreeLevel = 0; subtreeLevel < subtreeLevels; subtreeLevel++) {
+        const treeLevel = firstSubtreeLevel + subtreeLevel;
 
-        if (treeLevel > totalTreeLevels-1) {
+        if (treeLevel > totalTreeLevels - 1) {
             break; // Done
         }
 
         const ranges = available[treeLevel];
         for (const range of ranges) {
-            updateFunction(range, j, i, treeLevel, treeInfo);
+            updateFunction(range, subtreeLevel, subtreesDownTree, treeLevel, treeInfo);
         }
     }
 }
@@ -221,6 +221,7 @@ function updatePackedSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeL
     for (let z = range.startZ; z <= range.endZ; z++) {
         for (let y = range.startY; y <= range.endY; y++) {
             for (let x = range.startX; x <= range.endX; x++) {
+                // TODO: most of this common to the non-packed version
                 // Get the x y z of subtree root key that this range's (treeLevel x y z) resolves to
 
                 // Subtree's root key within the tree
@@ -240,14 +241,22 @@ function updatePackedSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeL
                 }
 
                 // Get the relative key within the subtree for the range's d x y z tree index
+                // Which head it's in
+                const headIdX = x >> treeLevel;
+                const headIdY = y >> treeLevel;
+                const headIdZ = z >> treeLevel;
+                // Amount to subtract off so that we are viewing xyz relative to the head it which it lives
+                const shiftX = (headIdX << treeLevel);
+                const shiftY = (headIdY << treeLevel);
+                const shiftZ = (headIdZ << treeLevel);
+                // Shift right to view it relative to the subtree in which it lives
                 const relativeSubtreeKey = {
-                    x: ((x / headCount[0]) << subtreeRootDepthInTree),
-                    y: ((y / headCount[1]) << subtreeRootDepthInTree),
-                    z: ((z / headCount[2]) << subtreeRootDepthInTree),
+                    x: ((x - shiftX) >> subtreeRootDepthInTree),
+                    y: ((y - shiftY) >> subtreeRootDepthInTree),
+                    z: ((z - shiftZ) >> subtreeRootDepthInTree),
                 };
                 console.log('relative subtree key: ');
                 console.log(relativeSubtreeKey);
-
 
                 // Update the bit that corresponds to this rel subtree key (d, x, y, z)
                 const indexOffsetToFirstByteOnLevel = arraySizes[relativeSubtreeKeyD];
@@ -305,33 +314,160 @@ function updateSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeLevel, 
                 }
 
                 // Get the relative key within the subtree for the range's d x y z tree index
+                // Which head it's in
+                const headIdX = x >> treeLevel;
+                const headIdY = y >> treeLevel;
+                const headIdZ = z >> treeLevel;
+                // Amount to subtract off so that we are viewing xyz relative to the head it which it lives
+                const shiftX = (headIdX << treeLevel);
+                const shiftY = (headIdY << treeLevel);
+                const shiftZ = (headIdZ << treeLevel);
+                // Shift right to view it relative to the subtree in which it lives
                 const relativeSubtreeKey = {
-                    x: ((x / headCount[0]) << subtreeRootDepthInTree),
-                    y: ((y / headCount[1]) << subtreeRootDepthInTree),
-                    z: ((z / headCount[2]) << subtreeRootDepthInTree),
+                    x: ((x - shiftX) >> subtreeRootDepthInTree),
+                    y: ((y - shiftY) >> subtreeRootDepthInTree),
+                    z: ((z - shiftZ) >> subtreeRootDepthInTree),
                 };
                 console.log('relative subtree key: ');
                 console.log(relativeSubtreeKey);
 
-
-                // Update the bit that corresponds to this rel subtree key (d, x, y, z)
+                // Update the byte that corresponds to this rel subtree key (d, x, y, z)
                 const indexOffsetToFirstByteOnLevel = arraySizes[relativeSubtreeKeyD];
                 // Treating the level as a linear array, what is the tiles index on this subtree level
-                const bitIndexOnLevel = z *dimOnLevel * dimOnLevel + y * dimOnLevel + x;
-                // Which byte is holding this tile's bit
-                const indexOffsetToByteOnLevel = bitIndexOnLevel >> 3;
-                // which bit in the byte is holding this tile's availability
-                const bitInByte = bitIndexOnLevel & 0b111; // modulo 8
+                const indexOnLevel = z * dimOnLevel * dimOnLevel + y * dimOnLevel + x;
                 const subtreeArray = map.get(key);
-                // console.log('subtreeArray: ' + subtreeArray);
-                subtreeArray[indexOffsetToFirstByteOnLevel + indexOffsetToByteOnLevel] |= (1 << bitInByte);
+                subtreeArray[indexOffsetToFirstByteOnLevel + indexOnLevel] = 1;
             }
         }
     }
 }
 
 function updatePackedSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, treeLevel, treeInfo) {
+    console.log('proccesing range: ');
+    console.log(range);
+    console.log('on treelevel: ' + treeLevel);
+    const map = treeInfo.map;
+    const arraySize = treeInfo.arraySize;
+    const arraySizes = treeInfo.arraySizes;
+    const headCount = treeInfo.headCount;
+    const subtreeLevels0Indexed = treeInfo.subtreeLevels0Indexed;
+
+    const levelsFromNearestSubtreeRoot = treeLevel % subtreeLevels0Indexed;
+    const subtreeRootDepthInTree = subtreesDownTree * subtreeLevels0Indexed;
+    const relativeSubtreeKeyD = levelsFromNearestSubtreeRoot;
+    const subtreeRootKeyD = treeLevel - levelsFromNearestSubtreeRoot;
+    const dimOnLevel = (1 << relativeSubtreeKeyD);
+    console.log('relativeSubtreeKeyD: ' + relativeSubtreeKeyD);
+    console.log('subtreeRootKeyD: ' + subtreeRootKeyD);
+
+    for (let y = range.startY; y <= range.endY; y++) {
+        for (let x = range.startX; x <= range.endX; x++) {
+            // TODO: most of this common to the non-packed version
+            // Get the x y z of subtree root key that this range's (treeLevel x y z) resolves to
+
+            // Subtree's root key within the tree
+            const subtreeRootKey = {
+                x: x >> levelsFromNearestSubtreeRoot,
+                y: y >> levelsFromNearestSubtreeRoot
+            };
+
+            const tileKey = treeLevel + '/' + x + '/' + y;
+            const key = subtreeRootKeyD + '/' + subtreeRootKey.x + '/' + subtreeRootKey.y;
+            console.log('subtree root key: ' + key + '  tile key: ' + tileKey);
+
+            // Create an array if doesn't exist. It is 0 inititialized.
+            if (!map.has(key)) {
+                map.set(key, new Uint8Array(arraySize));
+            }
+
+            // Get the relative key within the subtree for the range's d x y z tree index
+            // Which head it's in
+            const headIdX = x >> treeLevel;
+            const headIdY = y >> treeLevel;
+            // Amount to subtract off so that we are viewing xyz relative to the head it which it lives
+            const shiftX = (headIdX << treeLevel);
+            const shiftY = (headIdY << treeLevel);
+            // Shift right to view it relative to the subtree in which it lives
+            const relativeSubtreeKey = {
+                x: ((x - shiftX) >> subtreeRootDepthInTree),
+                y: ((y - shiftY) >> subtreeRootDepthInTree)
+            };
+            console.log('relative subtree key: ');
+            console.log(relativeSubtreeKey);
+
+            // Update the bit that corresponds to this rel subtree key (d, x, y, z)
+            const indexOffsetToFirstByteOnLevel = arraySizes[relativeSubtreeKeyD];
+            // Treating the level as a linear array, what is the tiles index on this subtree level
+            const bitIndexOnLevel = y * dimOnLevel + x;
+            // Which byte is holding this tile's bit
+            const indexOffsetToByteOnLevel = bitIndexOnLevel >> 3;
+            // which bit in the byte is holding this tile's availability
+            const bitInByte = bitIndexOnLevel & 0b111; // modulo 8
+            const subtreeArray = map.get(key);
+            // console.log('subtreeArray: ' + subtreeArray);
+            subtreeArray[indexOffsetToFirstByteOnLevel + indexOffsetToByteOnLevel] |= (1 << bitInByte);
+        }
+    }
 }
 
 function updateSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, treeLevel, treeInfo) {
+    console.log('proccesing range: ');
+    console.log(range);
+    console.log('on treelevel: ' + treeLevel);
+    const map = treeInfo.map;
+    const arraySize = treeInfo.arraySize;
+    const arraySizes = treeInfo.arraySizes;
+    const headCount = treeInfo.headCount;
+    const subtreeLevels0Indexed = treeInfo.subtreeLevels0Indexed;
+
+    const levelsFromNearestSubtreeRoot = treeLevel % subtreeLevels0Indexed;
+    const subtreeRootDepthInTree = subtreesDownTree * subtreeLevels0Indexed;
+    const relativeSubtreeKeyD = levelsFromNearestSubtreeRoot;
+    const subtreeRootKeyD = treeLevel - levelsFromNearestSubtreeRoot;
+    const dimOnLevel = (1 << relativeSubtreeKeyD);
+    console.log('relativeSubtreeKeyD: ' + relativeSubtreeKeyD);
+    console.log('subtreeRootKeyD: ' + subtreeRootKeyD);
+
+    for (let y = range.startY; y <= range.endY; y++) {
+        for (let x = range.startX; x <= range.endX; x++) {
+            // Get the x y z of subtree root key that this range's (treeLevel x y z) resolves to
+
+            // Subtree's root key within the tree
+            const subtreeRootKey = {
+                x: x >> levelsFromNearestSubtreeRoot,
+                y: y >> levelsFromNearestSubtreeRoot
+            };
+
+            const tileKey = treeLevel + '/' + x + '/' + y;
+            const key = subtreeRootKeyD + '/' + subtreeRootKey.x + '/' + subtreeRootKey.y;
+            console.log('subtree root key: ' + key + '  tile key: ' + tileKey);
+
+            // Create an array if doesn't exist. It is 0 inititialized.
+            if (!map.has(key)) {
+                map.set(key, new Uint8Array(arraySize));
+            }
+
+            // Get the relative key within the subtree for the range's d x y z tree index
+            // Which head it's in
+            const headIdX = x >> treeLevel;
+            const headIdY = y >> treeLevel;
+            // Amount to subtract off so that we are viewing xyz relative to the head it which it lives
+            const shiftX = (headIdX << treeLevel);
+            const shiftY = (headIdY << treeLevel);
+            // Shift right to view it relative to the subtree in which it lives
+            const relativeSubtreeKey = {
+                x: ((x - shiftX) >> subtreeRootDepthInTree),
+                y: ((y - shiftY) >> subtreeRootDepthInTree)
+            };
+            console.log('relative subtree key: ');
+            console.log(relativeSubtreeKey);
+
+            // Update the byte that corresponds to this rel subtree key (d, x, y, z)
+            const indexOffsetToFirstByteOnLevel = arraySizes[relativeSubtreeKeyD];
+            // Treating the level as a linear array, what is the tiles index on this subtree level
+            const indexOnLevel = y * dimOnLevel + x;
+            const subtreeArray = map.get(key);
+            subtreeArray[indexOffsetToFirstByteOnLevel + indexOnLevel] = 1;
+        }
+    }
 }
