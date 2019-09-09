@@ -117,7 +117,7 @@ const subtreesUint8ArraySizesOct = [
 ];
 
 
-const packed = false;
+const packed = true;
 const arraySizes = type === 'oct' ?
     (packed ? subtreesPackedUint8ArraySizesOct : subtreesUint8ArraySizesOct) :
     (packed ? subtreesPackedUint8ArraySizesQuad : subtreesUint8ArraySizesQuad);
@@ -210,6 +210,8 @@ fs.outputJsonSync(filePath, treeInfo.tilesetJson);
 //// FUNCTIONS ////
 ///////////////////
 function updatePackedSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeLevel, treeInfo) {
+    console.log();
+    console.log();
     console.log('proccesing range: ');
     console.log(range);
     console.log('on treelevel: ' + treeLevel);
@@ -235,6 +237,7 @@ function updatePackedSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeL
                     y: (y >> treeLevel),
                     z: (z >> treeLevel),
                 };
+                console.log();
                 console.log('tiles HeadId: ')
                 console.log(tilesHeadId);
 
@@ -269,7 +272,7 @@ function updatePackedSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeL
                     d: subtreeLevel,
                     x: ((x - shiftX)),
                     y: ((y - shiftY)),
-                    z: ((y - shiftZ)),
+                    z: ((z - shiftZ)),
                 };
                 console.log('relative subtree key: ');
                 console.log(relativeSubtreeKey);
@@ -283,14 +286,17 @@ function updatePackedSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeL
                 // which bit in the byte is holding this tile's availability
                 const bitInByte = bitIndexOnLevel & 0b111; // modulo 8
                 const subtreeArray = map.get(key);
-                // console.log('subtreeArray: ' + subtreeArray);
-                subtreeArray[indexOffsetToFirstByteOnLevel + indexOffsetToByteOnLevel] |= (1 << bitInByte);
+                const index = indexOffsetToFirstByteOnLevel + indexOffsetToByteOnLevel;
+                console.log('index: ' + index);
+                subtreeArray[index] |= (1 << bitInByte);
             }
         }
     }
 }
 
 function updateSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeLevel, treeInfo) {
+    console.log();
+    console.log();
     console.log('proccesing range: ');
     console.log(range);
     console.log('on treelevel: ' + treeLevel);
@@ -316,6 +322,7 @@ function updateSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeLevel, 
                     y: (y >> treeLevel),
                     z: (z >> treeLevel),
                 };
+                console.log();
                 console.log('tiles HeadId: ')
                 console.log(tilesHeadId);
 
@@ -350,7 +357,7 @@ function updateSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeLevel, 
                     d: subtreeLevel,
                     x: ((x - shiftX)),
                     y: ((y - shiftY)),
-                    z: ((y - shiftZ)),
+                    z: ((z - shiftZ)),
                 };
                 console.log('relative subtree key: ');
                 console.log(relativeSubtreeKey);
@@ -358,15 +365,19 @@ function updateSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeLevel, 
                 // Update the bit that corresponds to this rel subtree key (d, x, y, z)
                 const indexOffsetToFirstByteOnLevel = arraySizes[subtreeLevel];
                 // Treating the level as a linear array, what is the tiles index on this subtree level
-                const indexOnLevel = relativeSubtreeKey.z * dimOnLevelSqrd * relativeSubtreeKey.y * dimOnLevel + relativeSubtreeKey.x;
+                const indexOnLevel = relativeSubtreeKey.z * dimOnLevelSqrd + relativeSubtreeKey.y * dimOnLevel + relativeSubtreeKey.x;
                 const subtreeArray = map.get(key);
-                subtreeArray[indexOffsetToFirstByteOnLevel + indexOnLevel] = 1;
+                const index = indexOffsetToFirstByteOnLevel + indexOnLevel;
+                console.log('index: ' + index);
+                subtreeArray[index] = 1;
             }
         }
     }
 }
 
 function updatePackedSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, treeLevel, treeInfo) {
+    console.log();
+    console.log();
     console.log('proccesing range: ');
     console.log(range);
     console.log('on treelevel: ' + treeLevel);
@@ -390,6 +401,7 @@ function updatePackedSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, tree
                 x: (x >> treeLevel),
                 y: (y >> treeLevel),
             };
+            console.log();
             console.log('tiles HeadId: ')
             console.log(tilesHeadId);
 
@@ -435,13 +447,16 @@ function updatePackedSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, tree
             // which bit in the byte is holding this tile's availability
             const bitInByte = bitIndexOnLevel & 0b111; // modulo 8
             const subtreeArray = map.get(key);
-            // console.log('subtreeArray: ' + subtreeArray);
-            subtreeArray[indexOffsetToFirstByteOnLevel + indexOffsetToByteOnLevel] |= (1 << bitInByte);
+            const index = indexOffsetToFirstByteOnLevel + indexOffsetToByteOnLevel;
+            console.log('index: ' + index);
+            subtreeArray[index] |= (1 << bitInByte);
         }
     }
 }
 
 function updateSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, treeLevel, treeInfo) {
+    console.log();
+    console.log();
     console.log('proccesing range: ');
     console.log(range);
     console.log('on treelevel: ' + treeLevel);
@@ -465,6 +480,7 @@ function updateSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, treeLevel,
                 x: (x >> treeLevel),
                 y: (y >> treeLevel),
             };
+            console.log();
             console.log('tiles HeadId: ')
             console.log(tilesHeadId);
 
@@ -506,7 +522,9 @@ function updateSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, treeLevel,
             // Treating the level as a linear array, what is the tiles index on this subtree level
             const indexOnLevel = relativeSubtreeKey.y * dimOnLevel + relativeSubtreeKey.x;
             const subtreeArray = map.get(key);
-            subtreeArray[indexOffsetToFirstByteOnLevel + indexOnLevel] = 1;
+            const index = indexOffsetToFirstByteOnLevel + indexOnLevel;
+            console.log('index: ' + index);
+            subtreeArray[index] = 1;
         }
     }
 }
