@@ -117,7 +117,7 @@ const subtreesUint8ArraySizesOct = [
 ];
 
 
-const packed = true;
+const packed = false;
 const arraySizes = type === 'oct' ?
     (packed ? subtreesPackedUint8ArraySizesOct : subtreesUint8ArraySizesOct) :
     (packed ? subtreesPackedUint8ArraySizesQuad : subtreesUint8ArraySizesQuad);
@@ -196,7 +196,6 @@ for (const [key, value] of map) {
 }
 
 
-
 ///////////////////
 //// FUNCTIONS ////
 ///////////////////
@@ -241,14 +240,12 @@ function updatePackedSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeL
                 }
 
                 // Get the relative key within the subtree for the range's d x y z tree index
-                // Which head it's in
-                const headIdX = x >> treeLevel;
-                const headIdY = y >> treeLevel;
-                const headIdZ = z >> treeLevel;
                 // Amount to subtract off so that we are viewing xyz relative to the head it which it lives
-                const shiftX = (headIdX << treeLevel);
-                const shiftY = (headIdY << treeLevel);
-                const shiftZ = (headIdZ << treeLevel);
+                // Gets the head it's in first then finds that number of tiles
+                // to subtract off so that we are indices are relative to the head we are in
+                const shiftX = ((x >> treeLevel) << treeLevel);
+                const shiftY = ((y >> treeLevel) << treeLevel);
+                const shiftZ = ((z >> treeLevel) << treeLevel);
                 // Shift right to view it relative to the subtree in which it lives
                 const relativeSubtreeKey = {
                     x: ((x - shiftX) >> subtreeRootDepthInTree),
@@ -314,14 +311,12 @@ function updateSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeLevel, 
                 }
 
                 // Get the relative key within the subtree for the range's d x y z tree index
-                // Which head it's in
-                const headIdX = x >> treeLevel;
-                const headIdY = y >> treeLevel;
-                const headIdZ = z >> treeLevel;
                 // Amount to subtract off so that we are viewing xyz relative to the head it which it lives
-                const shiftX = (headIdX << treeLevel);
-                const shiftY = (headIdY << treeLevel);
-                const shiftZ = (headIdZ << treeLevel);
+                // Gets the head it's in first then finds that number of tiles
+                // to subtract off so that we are indices are relative to the head we are in
+                const shiftX = ((x >> treeLevel) << treeLevel);
+                const shiftY = ((y >> treeLevel) << treeLevel);
+                const shiftZ = ((z >> treeLevel) << treeLevel);
                 // Shift right to view it relative to the subtree in which it lives
                 const relativeSubtreeKey = {
                     x: ((x - shiftX) >> subtreeRootDepthInTree),
@@ -381,12 +376,11 @@ function updatePackedSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, tree
             }
 
             // Get the relative key within the subtree for the range's d x y z tree index
-            // Which head it's in
-            const headIdX = x >> treeLevel;
-            const headIdY = y >> treeLevel;
             // Amount to subtract off so that we are viewing xyz relative to the head it which it lives
-            const shiftX = (headIdX << treeLevel);
-            const shiftY = (headIdY << treeLevel);
+            // Gets the head it's in first then finds that number of tiles
+            // to subtract off so that we are indices are relative to the head we are in
+            const shiftX = ((x >> treeLevel) << treeLevel);
+            const shiftY = ((y >> treeLevel) << treeLevel);
             // Shift right to view it relative to the subtree in which it lives
             const relativeSubtreeKey = {
                 x: ((x - shiftX) >> subtreeRootDepthInTree),
@@ -448,12 +442,11 @@ function updateSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, treeLevel,
             }
 
             // Get the relative key within the subtree for the range's d x y z tree index
-            // Which head it's in
-            const headIdX = x >> treeLevel;
-            const headIdY = y >> treeLevel;
             // Amount to subtract off so that we are viewing xyz relative to the head it which it lives
-            const shiftX = (headIdX << treeLevel);
-            const shiftY = (headIdY << treeLevel);
+            // Gets the head it's in first then finds that number of tiles
+            // to subtract off so that we are indices are relative to the head we are in
+            const shiftX = ((x >> treeLevel) << treeLevel);
+            const shiftY = ((y >> treeLevel) << treeLevel);
             // Shift right to view it relative to the subtree in which it lives
             const relativeSubtreeKey = {
                 x: ((x - shiftX) >> subtreeRootDepthInTree),
