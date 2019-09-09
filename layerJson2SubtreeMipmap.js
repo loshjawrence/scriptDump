@@ -35,7 +35,7 @@ const available = layerJson.available;
 
 // "d/x/y/z" or "d/x/y" keys for the first available tiles
 // Add these entries to tilingScheme in the new tileset.json
-const roots = [];
+tilesetJson.tilingScheme.roots = [];
 
 // All subtrees in a tileset must have the same number of levels
 const subtreeLevelsMax = 10;
@@ -163,13 +163,14 @@ const treeInfo = {
     arraySizes: arraySizes,
     arraySize: arraySize,
     totalTreeLevels: totalTreeLevels,
+    firstLevel: -1,
+    tilesetJson: tilesetJson,
     // dimsPerLevel: dimsPerLevel,
 };
 
 const updateFunction = type === 'oct' ?
     (packed ? updatePackedSubtreesMapOct : updateSubtreesMapOct) :
     (packed ? updatePackedSubtreesMapQuad : updateSubtreesMapQuad);
-
 for (let subtreesDownTree = 0; subtreesDownTree < subtreesToSpanTree; subtreesDownTree++) {
     const firstSubtreeLevel = subtreesDownTree*subtreeLevels0Indexed;
     const lastSubtreeLevel = firstSubtreeLevel + subtreeLevels0Indexed;
@@ -182,6 +183,10 @@ for (let subtreesDownTree = 0; subtreesDownTree < subtreesToSpanTree; subtreesDo
         }
 
         const ranges = available[treeLevel];
+        if (ranges.length !== 0 && treeInfo.firstLevel === -1) {
+            treeInfo.firstLevel = treeLevel;
+            console.log('First Level: ' + treeInfo.firstLevel);
+        }
         for (const range of ranges) {
             updateFunction(range, subtreeLevel, subtreesDownTree, treeLevel, treeInfo);
         }
@@ -191,9 +196,12 @@ for (let subtreesDownTree = 0; subtreesDownTree < subtreesToSpanTree; subtreesDo
 // Write subtrees
 const map = treeInfo.map;
 for (const [key, value] of map) {
-    const filePath = 'Output/' + key;
+    const filePath = 'Output/availability/' + key;
     fs.outputFileSync(filePath, value, {encoding: 'binary'});
 }
+// Write tileset.json
+const filePath = 'Output/tileset.json';
+fs.outputJsonSync(filePath, treeInfo.tilesetJson);
 
 
 ///////////////////
@@ -232,7 +240,11 @@ function updatePackedSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeL
 
                 const tileKey = treeLevel + '/' + x + '/' + y + '/' + z;
                 const key = subtreeRootKeyD + '/' + subtreeRootKey.x + '/' + subtreeRootKey.y + '/' + subtreeRootKey.z;
-                console.log('subtree root key: ' + key + '  tile key: ' + tileKey);
+                console.log('subtree root key: ' + key + '  tile subtree key: ' + tileKey);
+                if (treeLevel === treeInfo.firstLevel) {
+                    treeInfo.tilesetJson.tilingScheme.roots.push([subtreeRootKeyD, subtreeRootKey.x, subtreeRootKey.y, subtreeRootKey.z]);
+                }
+
 
                 // Create an array if doesn't exist. It is 0 inititialized.
                 if (!map.has(key)) {
@@ -303,7 +315,10 @@ function updateSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeLevel, 
 
                 const tileKey = treeLevel + '/' + x + '/' + y + '/' + z;
                 const key = subtreeRootKeyD + '/' + subtreeRootKey.x + '/' + subtreeRootKey.y + '/' + subtreeRootKey.z;
-                console.log('subtree root key: ' + key + '  tile key: ' + tileKey);
+                console.log('subtree root key: ' + key + '  tile subtree key: ' + tileKey);
+                if (treeLevel === treeInfo.firstLevel) {
+                    treeInfo.tilesetJson.tilingScheme.roots.push([subtreeRootKeyD, subtreeRootKey.x, subtreeRootKey.y, subtreeRootKey.z])
+                }
 
                 // Create an array if doesn't exist. It is 0 inititialized.
                 if (!map.has(key)) {
@@ -369,6 +384,10 @@ function updatePackedSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, tree
             const tileKey = treeLevel + '/' + x + '/' + y;
             const key = subtreeRootKeyD + '/' + subtreeRootKey.x + '/' + subtreeRootKey.y;
             console.log('subtree root key: ' + key + '  tile key: ' + tileKey);
+            console.log('subtree root key: ' + key + '  tile subtree key: ' + tileKey);
+            if (treeLevel === treeInfo.firstLevel) {
+                treeInfo.tilesetJson.tilingScheme.roots.push([subtreeRootKeyD, subtreeRootKey.x, subtreeRootKey.y])
+            }
 
             // Create an array if doesn't exist. It is 0 inititialized.
             if (!map.has(key)) {
@@ -434,7 +453,10 @@ function updateSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, treeLevel,
 
             const tileKey = treeLevel + '/' + x + '/' + y;
             const key = subtreeRootKeyD + '/' + subtreeRootKey.x + '/' + subtreeRootKey.y;
-            console.log('subtree root key: ' + key + '  tile key: ' + tileKey);
+            console.log('subtree root key: ' + key + '  tile subtree key: ' + tileKey);
+            if (treeLevel === treeInfo.firstLevel) {
+                treeInfo.tilesetJson.tilingScheme.roots.push([subtreeRootKeyD, subtreeRootKey.x, subtreeRootKey.y])
+            }
 
             // Create an array if doesn't exist. It is 0 inititialized.
             if (!map.has(key)) {
