@@ -43,21 +43,21 @@ const subtreeLevelsOct = 7;
 const subtreeLevelsQuad = 9;
 
 // dim in each dir
-const subtreesLevelDim = [
-    0,          // 0  Levels
-    1,          // 1  Levels
-    2,          // 2  Levels
-    4,          // 3  Levels
-    8,          // 4  Levels
-    16,         // 5  Levels
-    32,         // 6  Levels
-    64,         // 7  Levels
-    128,        // 8  Levels
-    256,        // 9  Levels
-    512         // 10 Levels
-];
+// const subtreesLevelDim = [
+//     0,          // 0  Levels
+//     1,          // 1  Levels
+//     2,          // 2  Levels
+//     4,          // 3  Levels
+//     8,          // 4  Levels
+//     16,         // 5  Levels
+//     32,         // 6  Levels
+//     64,         // 7  Levels
+//     128,        // 8  Levels
+//     256,        // 9  Levels
+//     512         // 10 Levels
+// ];
 
-const subtreesUint8ArraySizesQuad = [
+const subtreesPackedUint8ArraySizesQuad = [
     0,          // 0  Levels
     1,          // 1  Levels
     2,          // 2  Levels
@@ -71,7 +71,7 @@ const subtreesUint8ArraySizesQuad = [
     43692       // 10 Levels
 ];
 
-const subtreesUint8ArraySizesOct = [
+const subtreesPackedUint8ArraySizesOct = [
     0,          // 0  Levels
     1,          // 1  Levels
     2,          // 2  Levels
@@ -85,7 +85,43 @@ const subtreesUint8ArraySizesOct = [
     19173962    // 10 Levels
 ];
 
-const arraySizes = type === 'oct' ? subtreesUint8ArraySizesOct : subtreesUint8ArraySizesQuad;
+// TODO: What is the zip diff of packs vs unpacked?  If it's significant enough, maybe keep it as packed but unpack into byte array client side
+// Quad packed vs unpack subtree efficiency diff is ~1.5 levels
+const subtreesUint8ArraySizesQuad = [
+    0,          // 0  Levels
+    1,          // 1  Levels
+    5,          // 2  Levels
+    21,         // 3  Levels
+    85,         // 4  Levels
+    341,        // 5  Levels
+    1365,       // 6  Levels
+    5461,       // 7  Levels
+    21845,      // 8  Levels
+    87381,      // 9  Levels
+    349525      // 10 Levels
+];
+
+// Oct packed vs unpack subtree efficiency diff is 1 level
+const subtreesUint8ArraySizesOct = [
+    0,          // 0  Levels
+    1,          // 1  Levels
+    9,          // 2  Levels
+    73,         // 3  Levels
+    585,        // 4  Levels
+    4681,       // 5  Levels
+    37449,      // 6  Levels
+    299593,     // 7  Levels
+    2396745,    // 8  Levels
+    19173961,   // 9  Levels
+    153391689   // 10 Levels
+];
+
+
+const packed = true;
+const arraySizes = type === 'oct' ?
+    (packed ? subtreesPackedUint8ArraySizesOct : subtreesUint8ArraySizesOct) :
+    (packed ? subtreesPackedUint8ArraySizesQuad : subtreesUint8ArraySizesQuad);
+
 const subtreeLevels = type === 'oct' ? subtreeLevelsOct : subtreeLevelsQuad;
 const subtreeLevels0Indexed = subtreeLevels - 1;
 const arraySize = arraySizes[subtreeLevels];
@@ -109,15 +145,14 @@ const subtreesToSpanTree = Math.ceil(totalTreeLevels / subtreeLevels);
 console.log('total tree levels: ' + totalTreeLevels); console.log();
 console.log('subtreesToSpanTree: ' + subtreesToSpanTree); console.log();
 
-
-const dimsPerLevel = [];
-for (let i = 0; i < totalTreeLevels; i++) {
-    const x = (1 << i) * headCount[0];
-    const y = (1 << i) * headCount[1];
-    const z = (1 << i) * headCount[2];
-    dimsPerLevel[i] = [x, y, z];
-    console.log('dimsPerLevel ' + i + ' : ' + dimsPerLevel[i]);
-}
+// const dimsPerLevel = [];
+// for (let i = 0; i < totalTreeLevels; i++) {
+//     const x = (1 << i) * headCount[0];
+//     const y = (1 << i) * headCount[1];
+//     const z = (1 << i) * headCount[2];
+//     dimsPerLevel[i] = [x, y, z];
+//     console.log('dimsPerLevel ' + i + ' : ' + dimsPerLevel[i]);
+// }
 
 const treeInfo = {
     map: new Map(),
@@ -128,10 +163,12 @@ const treeInfo = {
     arraySizes: arraySizes,
     arraySize: arraySize,
     totalTreeLevels: totalTreeLevels,
-    dimsPerLevel: dimsPerLevel,
+    // dimsPerLevel: dimsPerLevel,
 };
 
-const updateFunction = type === 'oct' ? updateSubtreesMapOct : updateSubtreesMapQuad;
+const updateFunction = type === 'oct' ?
+    (packed ? updatePackedSubtreesMapOct : updateSubtreesMapOct) :
+    (packed ? updatePackedSubtreesMapQuad : updateSubtreesMapQuad);
 
 for (let i = 0; i < subtreesToSpanTree; i++) {
     const firstSubtreeLevel = i*subtreeLevels0Indexed;
@@ -163,6 +200,71 @@ for (const [key, value] of map) {
 ///////////////////
 //// FUNCTIONS ////
 ///////////////////
+function updatePackedSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeLevel, treeInfo) {
+    console.log('proccesing range: ');
+    console.log(range);
+    console.log('on treelevel: ' + treeLevel);
+    const map = treeInfo.map;
+    const arraySize = treeInfo.arraySize;
+    const arraySizes = treeInfo.arraySizes;
+    const headCount = treeInfo.headCount;
+    const subtreeLevels0Indexed = treeInfo.subtreeLevels0Indexed;
+
+    const levelsFromNearestSubtreeRoot = treeLevel % subtreeLevels0Indexed;
+    const subtreeRootDepthInTree = subtreesDownTree * subtreeLevels0Indexed;
+    const relativeSubtreeKeyD = levelsFromNearestSubtreeRoot;
+    const subtreeRootKeyD = treeLevel - levelsFromNearestSubtreeRoot;
+    const dimOnLevel = (1 << relativeSubtreeKeyD);
+    console.log('relativeSubtreeKeyD: ' + relativeSubtreeKeyD);
+    console.log('subtreeRootKeyD: ' + subtreeRootKeyD);
+
+    for (let z = range.startZ; z <= range.endZ; z++) {
+        for (let y = range.startY; y <= range.endY; y++) {
+            for (let x = range.startX; x <= range.endX; x++) {
+                // Get the x y z of subtree root key that this range's (treeLevel x y z) resolves to
+
+                // Subtree's root key within the tree
+                const subtreeRootKey = {
+                    x: x >> levelsFromNearestSubtreeRoot,
+                    y: y >> levelsFromNearestSubtreeRoot,
+                    z: z >> levelsFromNearestSubtreeRoot
+                };
+
+                const tileKey = treeLevel + '/' + x + '/' + y + '/' + z;
+                const key = subtreeRootKeyD + '/' + subtreeRootKey.x + '/' + subtreeRootKey.y + '/' + subtreeRootKey.z;
+                console.log('subtree root key: ' + key + '  tile key: ' + tileKey);
+
+                // Create an array if doesn't exist. It is 0 inititialized.
+                if (!map.has(key)) {
+                    map.set(key, new Uint8Array(arraySize));
+                }
+
+                // Get the relative key within the subtree for the range's d x y z tree index
+                const relativeSubtreeKey = {
+                    x: ((x / headCount[0]) << subtreeRootDepthInTree),
+                    y: ((y / headCount[1]) << subtreeRootDepthInTree),
+                    z: ((z / headCount[2]) << subtreeRootDepthInTree),
+                };
+                console.log('relative subtree key: ');
+                console.log(relativeSubtreeKey);
+
+
+                // Update the bit that corresponds to this rel subtree key (d, x, y, z)
+                const indexOffsetToFirstByteOnLevel = arraySizes[relativeSubtreeKeyD];
+                // Treating the level as a linear array, what is the tiles index on this subtree level
+                const bitIndexOnLevel = z *dimOnLevel * dimOnLevel + y * dimOnLevel + x;
+                // Which byte is holding this tile's bit
+                const indexOffsetToByteOnLevel = bitIndexOnLevel >> 3;
+                // which bit in the byte is holding this tile's availability
+                const bitInByte = bitIndexOnLevel & 0b111; // modulo 8
+                const subtreeArray = map.get(key);
+                // console.log('subtreeArray: ' + subtreeArray);
+                subtreeArray[indexOffsetToFirstByteOnLevel + indexOffsetToByteOnLevel] |= (1 << bitInByte);
+            }
+        }
+    }
+}
+
 function updateSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeLevel, treeInfo) {
     console.log('proccesing range: ');
     console.log(range);
@@ -228,16 +330,8 @@ function updateSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeLevel, 
     }
 }
 
+function updatePackedSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, treeLevel, treeInfo) {
+}
+
 function updateSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, treeLevel, treeInfo) {
-    console.log('proccesing range: ');
-    console.log(range);
-    console.log('on treelevel: ' + treeLevel);
-
-    let subtreeKeyX = 0;
-    let subtreeKeyY = 0;
-
-    for (let y = range.startY; y <= range.endY; y++) {
-        for (let x = range.startX; x <= range.endX; x++) {
-        }
-    }
 }
