@@ -267,7 +267,7 @@ function updatePackedSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeL
                 const shiftX = (subtreeRootKey.x << subtreeLevel);
                 const shiftY = (subtreeRootKey.y << subtreeLevel);
                 const shiftZ = (subtreeRootKey.z << subtreeLevel);
-                // Shift right to view it relative to the subtree in which it lives
+                // Shift off excess to get tile key within subtree
                 const relativeSubtreeKey = {
                     d: subtreeLevel,
                     x: ((x - shiftX)),
@@ -352,7 +352,7 @@ function updateSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeLevel, 
                 const shiftX = (subtreeRootKey.x << subtreeLevel);
                 const shiftY = (subtreeRootKey.y << subtreeLevel);
                 const shiftZ = (subtreeRootKey.z << subtreeLevel);
-                // Shift right to view it relative to the subtree in which it lives
+                // Shift off excess to get tile key within subtree
                 const relativeSubtreeKey = {
                     d: subtreeLevel,
                     x: ((x - shiftX)),
@@ -374,6 +374,9 @@ function updateSubtreesMapOct(range, subtreeLevel, subtreesDownTree, treeLevel, 
         }
     }
 }
+
+        // var onLastLevel = ((level % subtreeLevels) === 0) && (level !== 0);
+        // subtreeRootLevel -= onLastLevel ? 1 : 0; // Because there is overlap between subtree roots and their parents last level, take the previous subtree when on the overlap level
 
 function updatePackedSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, treeLevel, treeInfo) {
     console.log();
@@ -429,7 +432,7 @@ function updatePackedSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, tree
             // Amount to subtract off so that we are viewing xyz relative to the head it which it lives
             const shiftX = (subtreeRootKey.x << subtreeLevel);
             const shiftY = (subtreeRootKey.y << subtreeLevel);
-            // Shift right to view it relative to the subtree in which it lives
+            // Shift off excess to get tile key within subtree
             const relativeSubtreeKey = {
                 d: subtreeLevel,
                 x: ((x - shiftX)),
@@ -508,7 +511,7 @@ function updateSubtreesMapQuad(range, subtreeLevel, subtreesDownTree, treeLevel,
             // Amount to subtract off so that we are viewing xyz relative to the head it which it lives
             const shiftX = (subtreeRootKey.x << subtreeLevel);
             const shiftY = (subtreeRootKey.y << subtreeLevel);
-            // Shift right to view it relative to the subtree in which it lives
+            // Shift off excess to get tile key within subtree
             const relativeSubtreeKey = {
                 d: subtreeLevel,
                 x: ((x - shiftX)),
